@@ -61,7 +61,7 @@ function TopNavbar({ user }: any) {
 }
 
 /* ================= PAGE ================= */
-export default function PengajuanPage() {
+export default function LaporanPage() {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -114,6 +114,12 @@ export default function PengajuanPage() {
               {schoolName}
             </h1>
 
+            {verified === null && (
+              <p className="text-xs text-gray-400">
+                memeriksa verifikasi...
+              </p>
+            )}
+
             {verified === true && (
               <p className="text-xs text-green-600 flex items-center gap-1">
                 <CheckCircle size={14} />
@@ -131,12 +137,12 @@ export default function PengajuanPage() {
 
           <nav className="space-y-2 text-sm">
             <MenuLink href="/dashboard" icon={<Home size={18} />} label="Dashboard" active={pathname === '/dashboard'} />
-            <MenuLink href="/pengajuan" icon={<ClipboardList size={18} />} label="Pengajuan" active />
-            <MenuLink href="/ringkasan" icon={<BarChart2 size={18} />} label="Ringkasan" active={pathname === '/ringkasan'} />
-            <MenuLink href="/laporan" icon={<FileText size={18} />} label="Laporan" active={pathname === '/laporan'} />
-            <MenuLink href="/timeline" icon={<Clock size={18} />} label="Timeline" active={pathname === '/timeline'} />
-            <MenuLink href="/progres" icon={<TrendingUp size={18} />} label="Progres" active={pathname === '/progres'} />
-            <MenuLink href="/profil" icon={<User size={18} />} label="Profil" active={pathname === '/profil'} />
+            <MenuLink href="/pengajuan" icon={<ClipboardList size={18} />} label="Pengajuan" />
+            <MenuLink href="/ringkasan" icon={<BarChart2 size={18} />} label="Ringkasan" />
+            <MenuLink href="/laporan" icon={<FileText size={18} />} label="Laporan" active />
+            <MenuLink href="/timeline" icon={<Clock size={18} />} label="Timeline" />
+            <MenuLink href="/progres" icon={<TrendingUp size={18} />} label="Progres" />
+            <MenuLink href="/profil" icon={<User size={18} />} label="Profil" />
           </nav>
         </div>
 
@@ -158,8 +164,6 @@ export default function PengajuanPage() {
 
         <main className="p-10">
           <div className="max-w-5xl mx-auto space-y-8">
-
-            {/* === TOMBOL KEMBALI === */}
             <button
               onClick={() => router.push('/dashboard')}
               className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
@@ -168,47 +172,26 @@ export default function PengajuanPage() {
             </button>
 
             <h1 className="text-3xl font-bold">
-              Form Pengajuan Kampanye Sekolah 3T
+              Form Laporan Penggunaan Dana
             </h1>
 
-            <Section title="Informasi Umum">
+            <Section title="Informasi Kegiatan">
               <TwoCol>
-                <AutoField label="Nama Kampanye" />
-                <AutoField label="Kategori Kebutuhan" />
-                <AutoField label="Wilayah Sekolah" />
-                <AutoField label="Ringkasan Kampanye" />
+                <AutoField label="Judul Kegiatan" />
+                <DateField label="Tanggal Kegiatan" />
+                <AutoField label="Deskripsi Kegiatan" />
               </TwoCol>
             </Section>
 
-            <Section title="Informasi Sekolah">
+            <Section title="Informasi Dana">
               <TwoCol>
-                <AutoField label="Nama Sekolah" value={schoolName} disabled />
-                <AutoField label="Kontak Penanggung Jawab" />
-                <AutoField label="NPSN" value={user.npsn} disabled />
-                <AutoField label="Nama Penanggung Jawab" />
-                <AutoField label="Alamat Sekolah" />
-                <AutoField label="Alamat Penanggung Jawab" />
+                <AutoField label="Nominal Dana Terpakai (Rp)" placeholder="Contoh: 500000" />
+                <UploadBox label="Upload Bukti Pembayaran" />
               </TwoCol>
-            </Section>
 
-            <Section title="Kondisi Awal">
-              <TwoCol>
-                <AutoField label="Latar Belakang" />
-                <UploadBox label="Surat Keterangan Sekolah" />
-                <AutoField label="Tujuan Penggalangan Dana" />
-                <UploadBox label="Proposal Pengajuan" />
-                <AutoField label="Manfaat yang Diharapkan" />
-                <UploadBox label="Foto Kondisi Sekolah" />
-              </TwoCol>
-            </Section>
-
-            <Section title="Rencana Dana & Waktu">
-              <TwoCol>
-                <AutoField label="Target Dana" placeholder="Contoh: 5000000" />
-                <DateField label="Tanggal Mulai Kegiatan" />
-                <UploadBox label="Rincian Penggunaan Dana" />
-                <DateField label="Tanggal Selesai Kegiatan" />
-              </TwoCol>
+              <p className="text-sm text-gray-500 mt-4">
+                Status: <span className="font-medium">Draft</span>
+              </p>
             </Section>
 
             <div className="flex justify-end gap-3">
@@ -262,12 +245,11 @@ function AutoField({ label, value, disabled, placeholder }: any) {
   return (
     <div>
       <label className="text-sm font-medium">{label}</label>
-      <textarea
-        rows={1}
+      <input
         defaultValue={value}
         disabled={disabled}
         placeholder={placeholder}
-        className={`w-full mt-1 px-4 py-2 h-[42px] rounded-lg resize-none outline-none
+        className={`w-full mt-1 px-4 py-2 h-[42px] rounded-lg outline-none
           ${disabled ? 'bg-gray-200 text-gray-600 cursor-not-allowed' : 'bg-gray-100'}
         `}
       />
@@ -303,7 +285,12 @@ function UploadBox({ label }: any) {
         </span>
       </div>
 
-      <input ref={ref} type="file" hidden />
+      <input
+        ref={ref}
+        type="file"
+        accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+        hidden
+      />
     </div>
   );
 }

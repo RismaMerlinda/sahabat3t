@@ -67,7 +67,6 @@ function TopNavbar({ user }: any) {
   );
 }
 
-
 export default function DashboardPage() {
 
   const pathname = usePathname();

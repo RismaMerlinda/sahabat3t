@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   Home,
   ClipboardList,
@@ -14,7 +14,7 @@ import {
   LogOut,
   CheckCircle,
   XCircle,
-  Upload,
+  ImageOff,
 } from 'lucide-react';
 
 /* ================= TOP NAVBAR ================= */
@@ -31,7 +31,7 @@ function TopNavbar({ user }: any) {
           <input
             type="text"
             placeholder="Search for something"
-            className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm outline-none focus:ring-2 focus:ring-indigo-300"
+            className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm outline-none"
           />
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
             🔍
@@ -39,14 +39,10 @@ function TopNavbar({ user }: any) {
         </div>
       </div>
 
-      <div
-        className="flex items-center gap-3 cursor-pointer"
-        onClick={() => (window.location.href = '/profil')}
-      >
+      <div className="flex items-center gap-3 cursor-pointer">
         <div className="w-9 h-9 bg-indigo-600 text-white rounded-full flex items-center justify-center font-semibold">
           {avatarLetter}
         </div>
-
         <div className="text-right leading-tight">
           <p className="text-sm font-medium text-gray-800 truncate max-w-[140px]">
             {user?.schoolName}
@@ -61,9 +57,8 @@ function TopNavbar({ user }: any) {
 }
 
 /* ================= PAGE ================= */
-export default function PengajuanPage() {
+export default function ProgresPage() {
   const pathname = usePathname();
-  const router = useRouter();
 
   const [user, setUser] = useState<any>(null);
   const [officialSchool, setOfficialSchool] = useState<any>(null);
@@ -131,11 +126,11 @@ export default function PengajuanPage() {
 
           <nav className="space-y-2 text-sm">
             <MenuLink href="/dashboard" icon={<Home size={18} />} label="Dashboard" active={pathname === '/dashboard'} />
-            <MenuLink href="/pengajuan" icon={<ClipboardList size={18} />} label="Pengajuan" active />
+            <MenuLink href="/pengajuan" icon={<ClipboardList size={18} />} label="Pengajuan" active={pathname === '/pengajuan'} />
             <MenuLink href="/ringkasan" icon={<BarChart2 size={18} />} label="Ringkasan" active={pathname === '/ringkasan'} />
             <MenuLink href="/laporan" icon={<FileText size={18} />} label="Laporan" active={pathname === '/laporan'} />
             <MenuLink href="/timeline" icon={<Clock size={18} />} label="Timeline" active={pathname === '/timeline'} />
-            <MenuLink href="/progres" icon={<TrendingUp size={18} />} label="Progres" active={pathname === '/progres'} />
+            <MenuLink href="/progres" icon={<TrendingUp size={18} />} label="Progres" active />
             <MenuLink href="/profil" icon={<User size={18} />} label="Profil" active={pathname === '/profil'} />
           </nav>
         </div>
@@ -158,66 +153,20 @@ export default function PengajuanPage() {
 
         <main className="p-10">
           <div className="max-w-5xl mx-auto space-y-8">
-
-            {/* === TOMBOL KEMBALI === */}
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
-            >
-              Kembali
-            </button>
-
             <h1 className="text-3xl font-bold">
-              Form Pengajuan Kampanye Sekolah 3T
+              Galeri Kondisi & Progres
             </h1>
 
-            <Section title="Informasi Umum">
-              <TwoCol>
-                <AutoField label="Nama Kampanye" />
-                <AutoField label="Kategori Kebutuhan" />
-                <AutoField label="Wilayah Sekolah" />
-                <AutoField label="Ringkasan Kampanye" />
-              </TwoCol>
-            </Section>
-
-            <Section title="Informasi Sekolah">
-              <TwoCol>
-                <AutoField label="Nama Sekolah" value={schoolName} disabled />
-                <AutoField label="Kontak Penanggung Jawab" />
-                <AutoField label="NPSN" value={user.npsn} disabled />
-                <AutoField label="Nama Penanggung Jawab" />
-                <AutoField label="Alamat Sekolah" />
-                <AutoField label="Alamat Penanggung Jawab" />
-              </TwoCol>
-            </Section>
-
-            <Section title="Kondisi Awal">
-              <TwoCol>
-                <AutoField label="Latar Belakang" />
-                <UploadBox label="Surat Keterangan Sekolah" />
-                <AutoField label="Tujuan Penggalangan Dana" />
-                <UploadBox label="Proposal Pengajuan" />
-                <AutoField label="Manfaat yang Diharapkan" />
-                <UploadBox label="Foto Kondisi Sekolah" />
-              </TwoCol>
-            </Section>
-
-            <Section title="Rencana Dana & Waktu">
-              <TwoCol>
-                <AutoField label="Target Dana" placeholder="Contoh: 5000000" />
-                <DateField label="Tanggal Mulai Kegiatan" />
-                <UploadBox label="Rincian Penggunaan Dana" />
-                <DateField label="Tanggal Selesai Kegiatan" />
-              </TwoCol>
-            </Section>
-
-            <div className="flex justify-end gap-3">
-              <button className="px-5 py-2 bg-gray-200 rounded-lg">
-                Simpan Draft
-              </button>
-              <button className="px-5 py-2 bg-indigo-600 text-white rounded-lg">
-                Kirim Laporan
-              </button>
+            {/* ===== EMPTY STATE (USER BARU) ===== */}
+            <div className="bg-white p-12 rounded-2xl shadow text-center">
+              <ImageOff size={56} className="mx-auto text-gray-400" />
+              <h2 className="mt-4 text-lg font-semibold">
+                Belum Ada Progres
+              </h2>
+              <p className="text-sm text-gray-500 mt-2 max-w-md mx-auto">
+                Anda belum menambahkan dokumentasi kondisi awal maupun progres kegiatan.
+                Setelah pengajuan disetujui, perkembangan akan ditampilkan di halaman ini.
+              </p>
             </div>
           </div>
         </main>
@@ -226,7 +175,7 @@ export default function PengajuanPage() {
   );
 }
 
-/* ================= COMPONENTS ================= */
+/* ================= COMPONENT ================= */
 
 function MenuLink({ href, icon, label, active }: any) {
   return (
@@ -242,68 +191,5 @@ function MenuLink({ href, icon, label, active }: any) {
       {icon}
       {label}
     </Link>
-  );
-}
-
-function Section({ title, children }: any) {
-  return (
-    <div className="bg-white p-6 rounded-2xl shadow space-y-4">
-      <h2 className="font-semibold">{title}</h2>
-      {children}
-    </div>
-  );
-}
-
-function TwoCol({ children }: any) {
-  return <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{children}</div>;
-}
-
-function AutoField({ label, value, disabled, placeholder }: any) {
-  return (
-    <div>
-      <label className="text-sm font-medium">{label}</label>
-      <textarea
-        rows={1}
-        defaultValue={value}
-        disabled={disabled}
-        placeholder={placeholder}
-        className={`w-full mt-1 px-4 py-2 h-[42px] rounded-lg resize-none outline-none
-          ${disabled ? 'bg-gray-200 text-gray-600 cursor-not-allowed' : 'bg-gray-100'}
-        `}
-      />
-    </div>
-  );
-}
-
-function DateField({ label }: any) {
-  return (
-    <div>
-      <label className="text-sm font-medium">{label}</label>
-      <input
-        type="date"
-        className="w-full mt-1 px-4 py-2 h-[42px] bg-gray-100 rounded-lg outline-none"
-      />
-    </div>
-  );
-}
-
-function UploadBox({ label }: any) {
-  const ref = useRef<HTMLInputElement>(null);
-
-  return (
-    <div>
-      <label className="text-sm font-medium">{label}</label>
-      <div
-        onClick={() => ref.current?.click()}
-        className="w-full mt-1 h-[42px] bg-gray-100 rounded-lg flex items-center gap-3 px-4 cursor-pointer hover:bg-gray-200"
-      >
-        <Upload size={18} className="text-indigo-600" />
-        <span className="text-sm text-gray-600">
-          Upload file (JPG, PNG, PDF, WORD, DLL)
-        </span>
-      </div>
-
-      <input ref={ref} type="file" hidden />
-    </div>
   );
 }
