@@ -24,30 +24,47 @@ export default function RegisterPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    if (formData.password.length < 8) {
-      alert('Kata sandi minimal 8 karakter');
-      return;
-    }
+  if (formData.password.length < 8) {
+    alert('Kata sandi minimal 8 karakter');
+    return;
+  }
 
-    if (formData.password !== formData.confirmPassword) {
-      alert('Kata sandi tidak sama');
-      return;
-    }
+  if (formData.password !== formData.confirmPassword) {
+    alert('Kata sandi tidak sama');
+    return;
+  }
 
-    localStorage.setItem(
-      'user',
-      JSON.stringify({
-        schoolName: formData.schoolName,
-        npsn: formData.npsn,
+  try {
+    const res = await fetch('http://localhost:5000/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         email: formData.email,
-      })
-    );
+        password: formData.password,
+        full_name: formData.schoolName, // ⬅️ WAJIB INI
+      }),
+    });
 
-    router.push('/dashboard');
-  };
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.message || 'Register gagal');
+      return;
+    }
+
+    alert('Register berhasil, silakan login');
+    router.push('/login');
+  } catch (error) {
+    console.error(error);
+    alert('Terjadi kesalahan server');
+  }
+};
+
 
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-[#EDF2F7]">
