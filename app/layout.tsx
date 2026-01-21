@@ -1,34 +1,22 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import ToastProvider from "@/components/providers/ToastProvider";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "Crowdfunding Sekolah 3T",
-  description: "Platform Crowdfunding Sekolah",
+export const metadata = {
+    title: "SAHABAT3T",
+    description: "Platform Pendidikan Daerah 3T",
 };
 
 export default function RootLayout({
-  children,
+    children,
 }: {
-  children: React.ReactNode;
+    children: React.ReactNode;
 }) {
-  return (
-    <html lang="id">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#F5F7FB]`}
-      >
-        {children}
-      </body>
-    </html>
-  );
+    return (
+        <html lang="id">
+            <body>
+                <ToastProvider />
+                {children}
+            </body>
+        </html>
+    );
 }

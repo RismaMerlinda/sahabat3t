@@ -1,75 +1,39 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useEffect, useState, useRef } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import api from '@/lib/axios';
+import Sidebar from '@/app/components/Sidebar';
+import Header from '@/app/components/Header';
 import {
-  Home,
-  ClipboardList,
-  BarChart2,
-  FileText,
-  Clock,
-  TrendingUp,
-  User,
-  LogOut,
+  UploadCloud,
   CheckCircle,
-  XCircle,
+  User,
+  Clock,
+  Trash2,
   Image as ImageIcon,
   FileText as FileIcon,
+  Plus,
+  Calendar,
+  Lock
 } from 'lucide-react';
 
-/* ================= TOP NAVBAR ================= */
-function TopNavbar({ user }: any) {
-  const avatarLetter =
-    typeof user?.schoolName === 'string'
-      ? user.schoolName.charAt(0).toUpperCase()
-      : 'S';
+/* ================= PAGE CONTENT ================= */
 
-  return (
-    <div className="h-16 bg-white px-8 flex items-center justify-between">
-      {/* SEARCH */}
-      <div className="flex-1 flex justify-start">
-        <div className="relative w-full max-w-md">
-          <input
-            type="text"
-            placeholder="Search for something"
-            className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm outline-none"
-          />
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            🔍
-          </span>
-        </div>
-      </div>
-
-      {/* PROFILE */}
-      <div
-        className="flex items-center gap-3 cursor-pointer"
-        onClick={() => (window.location.href = '/profil')}
-      >
-        <div className="w-9 h-9 bg-indigo-600 text-white rounded-full flex items-center justify-center font-semibold">
-          {avatarLetter}
-        </div>
-
-        <div className="text-right leading-tight">
-          <p className="text-sm font-medium text-gray-800 truncate max-w-[140px]">
-            {user?.schoolName}
-          </p>
-          <p className="text-xs text-gray-500 truncate max-w-[140px]">
-            {user?.email}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ================= PAGE ================= */
 export default function TimelinePage() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const [user, setUser] = useState<any>(null);
   const [officialSchool, setOfficialSchool] = useState<any>(null);
   const [verified, setVerified] = useState<boolean | null>(null);
+  const [openSidebar, setOpenSidebar] = useState(false);
+
+  // Logic
+  const [loading, setLoading] = useState(true);
+  const [hasApprovedProposal, setHasApprovedProposal] = useState(false);
+  const [files, setFiles] = useState<any[]>([]);
+  const addInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
@@ -81,162 +45,208 @@ export default function TimelinePage() {
     const parsed = JSON.parse(stored);
     setUser(parsed);
 
-    if (!parsed.npsn) {
+    if (parsed.npsn) {
+      fetch(`/api/verifikasi-sekolah?npsn=${parsed.npsn}`)
+        .then(res => res.json())
+        .then(json => {
+          if (json?.data?.satuanPendidikan) {
+            setVerified(true);
+            setOfficialSchool(json.data.satuanPendidikan);
+          } else {
+            setVerified(false);
+          }
+        })
+        .catch(() => setVerified(false));
+    } else {
       setVerified(false);
-      return;
     }
 
-    fetch(`https://api.fazriansyah.eu.org/v1/sekolah?npsn=${parsed.npsn}`)
-      .then(res => res.json())
-      .then(json => {
-        if (json?.data?.satuanPendidikan) {
-          setVerified(true);
-          setOfficialSchool(json.data.satuanPendidikan);
-        } else {
-          setVerified(false);
-        }
+    // Check Proposals
+    api.get('/proposals')
+      .then(res => {
+        const approved = res.data.some((p: any) => p.status === 'approved');
+        setHasApprovedProposal(approved);
       })
-      .catch(() => setVerified(false));
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+
   }, []);
 
-  if (!user) {
-    return <div className="p-10 text-sm text-gray-400">Memuat data...</div>;
-  }
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat('id-ID', {
+      day: 'numeric', month: 'long', year: 'numeric'
+    }).format(date);
+  };
 
-  const schoolName =
-    officialSchool?.nama || user.schoolName || 'Sekolah';
+  const todayStr = formatDate(new Date());
+
+  /* --- FILE LOGIC --- */
+  const handleAddFile = (e: any) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files).map((file: any) => ({
+        fileObj: file,
+        name: file.name,
+        type: file.type,
+        size: (file.size / 1024).toFixed(0) + ' KB',
+        date: formatDate(new Date()) // Realtime date
+      }));
+      setFiles(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const handleDeleteFile = (index: number) => {
+    if (confirm('Hapus dokumen ini?')) {
+      setFiles(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  if (!user) return null;
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="min-h-screen flex bg-[#E6FFFA]">
+      <Sidebar
+        user={user}
+        open={openSidebar}
+        setOpen={setOpenSidebar}
+        pathname={pathname}
+        verified={verified}
+        officialName={officialSchool?.nama}
+      />
 
-      {/* ================= SIDEBAR ================= */}
-      <aside className="w-64 bg-white px-6 py-6 flex flex-col justify-between">
-        <div>
-          <div className="mb-10">
-            <h1 className="text-lg font-bold text-indigo-600 truncate">
-              {schoolName}
-            </h1>
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header
+          user={user}
+          setOpen={setOpenSidebar}
+          officialName={officialSchool?.nama}
+          title="Timeline Kegiatan"
+        />
 
-            {verified === null && (
-              <p className="text-xs text-gray-400">
-                memeriksa verifikasi...
-              </p>
-            )}
+        <main className="p-4 md:p-8 max-w-5xl mx-auto w-full space-y-8">
 
-            {verified === true && (
-              <p className="text-xs text-green-600 flex items-center gap-1">
-                <CheckCircle size={14} />
-                Terverifikasi Kemendikbud
-              </p>
-            )}
-
-            {verified === false && (
-              <p className="text-xs text-red-500 flex items-center gap-1">
-                <XCircle size={14} />
-                Belum Terverifikasi
-              </p>
-            )}
-          </div>
-
-          <nav className="space-y-2 text-sm">
-            <MenuLink href="/dashboard" icon={<Home size={18} />} label="Dashboard" />
-            <MenuLink href="/pengajuan" icon={<ClipboardList size={18} />} label="Pengajuan" />
-            <MenuLink href="/ringkasan" icon={<BarChart2 size={18} />} label="Ringkasan" />
-            <MenuLink href="/laporan" icon={<FileText size={18} />} label="Laporan" />
-            <MenuLink href="/timeline" icon={<Clock size={18} />} label="Timeline" active />
-            <MenuLink href="/progress" icon={<TrendingUp size={18} />} label="Progress" />
-            <MenuLink href="/profil" icon={<User size={18} />} label="Profil" />
-          </nav>
-        </div>
-
-        <button
-          onClick={() => {
-            localStorage.clear();
-            window.location.href = '/login';
-          }}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-red-500"
-        >
-          <LogOut size={18} />
-          Logout
-        </button>
-      </aside>
-
-      {/* ================= MAIN ================= */}
-      <div className="flex-1 flex flex-col">
-        <TopNavbar user={user} />
-
-        <main className="p-10">
-          <div className="max-w-5xl mx-auto">
-
-            <h1 className="text-3xl font-bold mb-10">Timeline Kegiatan</h1>
-
-            {/* EMPTY TIMELINE */}
-            <div className="flex gap-8">
-              
-              {/* LINE */}
-              <div className="flex flex-col items-center">
-                <div className="w-3 h-3 rounded-full bg-gray-300" />
-                <div className="flex-1 w-px bg-gray-300" />
-              </div>
-
-              {/* CARD */}
-              <div className="flex-1">
-                <div className="bg-white rounded-2xl shadow p-8 text-center">
-                  <p className="text-sm text-gray-400 mb-6">
-                    Belum ada laporan kegiatan yang ditambahkan
-                  </p>
-
-                  <div className="bg-gray-100 rounded-xl p-6 space-y-4">
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="h-24 bg-gray-300 rounded-lg flex items-center justify-center">
-                        <ImageIcon className="text-gray-500" />
-                      </div>
-                      <div className="h-24 bg-gray-300 rounded-lg flex items-center justify-center">
-                        <ImageIcon className="text-gray-500" />
-                      </div>
-                      <div className="h-24 bg-gray-300 rounded-lg flex items-center justify-center">
-                        <ImageIcon className="text-gray-500" />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 justify-center bg-white rounded-lg py-2">
-                      <FileIcon size={16} className="text-gray-500" />
-                      <span className="text-sm text-gray-500">
-                        Belum ada dokumen
-                      </span>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-gray-400 mt-6">
-                    Data akan muncul setelah laporan dikirim
-                  </p>
-                </div>
-              </div>
-
+          {/* Header */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-[#0F2F2E]">Timeline Kegiatan</h1>
+              <p className="text-sm text-[#6B8E8B]">Lacak milestone dan dokumentasi kegiatan sekolah.</p>
             </div>
 
+            {hasApprovedProposal ? (
+              <button
+                className="bg-[#40E0D0] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[#2CB1A6] transition shadow-lg shadow-[#40E0D0]/20 text-sm flex items-center gap-2"
+              >
+                <Plus size={18} /> Tambah Kegiatan
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 bg-yellow-50 text-yellow-600 px-4 py-2 rounded-xl border border-yellow-200 text-xs font-semibold">
+                <Lock size={14} /> Menunggu Persetujuan Proposal
+              </div>
+            )}
           </div>
+
+          {/* TIMELINE */}
+          <div className="relative pl-8 border-l-2 border-[#B2F5EA] space-y-12">
+
+            {/* ITEM 1: Upload Documents (Conditional) */}
+            {hasApprovedProposal ? (
+              <TimelineItem
+                date={todayStr}  // Realtime Today's Date
+                title="Dokumentasi Pelaksanaan"
+                description="Upload foto dan dokumen terkait pelaksanaan kegiatan hari ini."
+                icon={<UploadCloud size={18} className="text-white" />}
+                active
+              >
+                <div className="mt-4 bg-[#F8FAFC] rounded-2xl p-6 border border-dashed border-[#B2F5EA]">
+                  <div className="flex justify-center mb-6">
+                    <button
+                      onClick={() => addInputRef.current?.click()}
+                      className="flex items-center gap-2 bg-[#CCFBF1] text-[#1E8F86] px-6 py-3 rounded-xl hover:bg-[#bbf0e5] transition font-semibold text-sm"
+                    >
+                      <UploadCloud size={20} />
+                      Upload Dokumen
+                    </button>
+                    <input type="file" multiple hidden ref={addInputRef} onChange={handleAddFile} />
+                  </div>
+
+                  {files.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {files.map((file, idx) => (
+                        <div key={idx} className="bg-white p-3 rounded-xl border border-[#E2E8F0] flex items-center gap-3">
+                          <div className="p-2 bg-[#F1F5F9] rounded-lg text-[#64748B]">
+                            {file.type.includes('image') ? <ImageIcon size={18} /> : <FileIcon size={18} />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-[#0F2F2E] truncate">{file.name}</p>
+                            <p className="text-[10px] text-[#6B8E8B]">{file.date} &bull; {file.size}</p>
+                          </div>
+                          <button onClick={() => handleDeleteFile(idx)} className="text-[#EF4444] hover:bg-[#FEE2E2] p-1.5 rounded-lg transition">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </TimelineItem>
+            ) : (
+              <TimelineItem
+                date={todayStr} // Also show today's date for current status
+                title="Kegiatan Belum Dimulai"
+                description="Anda dapat mengupload dokumentasi kegiatan setelah proposal Anda disetujui (ACC)."
+                icon={<Lock size={18} className="text-white" />}
+                color="bg-gray-300"
+                active={false}
+              />
+            )}
+
+            {/* ITEM 2: Mocked History */}
+            {hasApprovedProposal && (
+              <TimelineItem
+                date={formatDate(new Date(Date.now() - 86400000))} // Yesterday
+                title="Pengajuan Disetujui"
+                description="Proposal Anda telah disetujui oleh Admin."
+                icon={<CheckCircle size={18} className="text-white" />}
+                color="bg-green-500"
+              />
+            )}
+
+            {/* History Item */}
+            <TimelineItem
+              date={formatDate(new Date(Date.now() - 172800000))} // 2 Days ago
+              title="Akun Terdaftar"
+              description="Selamat datang di Sahabat3T!"
+              icon={<User size={18} className="text-white" />}
+              color="bg-[#40E0D0]"
+              last
+            />
+
+          </div>
+
         </main>
       </div>
     </div>
   );
 }
 
-/* ================= COMPONENT ================= */
+/* ================= HELPERS ================= */
 
-function MenuLink({ href, icon, label, active }: any) {
+function TimelineItem({ date, title, description, children, icon, color = "bg-[#40E0D0]", active, last }: any) {
   return (
-    <Link
-      href={href}
-      className={`flex items-center gap-3 px-4 py-2 rounded-lg transition
-        ${
-          active
-            ? 'bg-indigo-100 text-indigo-600 font-medium'
-            : 'text-gray-600 hover:bg-indigo-50 hover:text-indigo-600'
-        }`}
-    >
-      {icon}
-      {label}
-    </Link>
+    <div className="relative">
+      {/* Dot */}
+      <div className={`absolute -left-[41px] top-0 w-6 h-6 rounded-full flex items-center justify-center border-4 border-[#E6FFFA] shadow-sm z-10 ${color}`}>
+        {icon}
+      </div>
+
+      <div className={`bg-white p-6 rounded-2xl border ${active ? 'border-[#40E0D0] shadow-md ring-4 ring-[#CCFBF1]' : 'border-[#B2F5EA] shadow-sm'}`}>
+        <div className="flex-wrap justify-between items-start gap-2 mb-2 flex">
+          <h3 className="text-lg font-bold text-[#0F2F2E]">{title}</h3>
+          <span className="text-xs font-medium bg-[#F1F5F9] text-[#64748B] px-3 py-1 rounded-full flex items-center gap-1">
+            <Calendar size={12} /> {date}
+          </span>
+        </div>
+        <p className="text-sm text-[#4A6F6C]">{description}</p>
+        {children}
+      </div>
+    </div>
   );
 }

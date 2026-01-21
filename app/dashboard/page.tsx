@@ -1,315 +1,301 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-
+import toast from 'react-hot-toast';
+import { usePathname, useRouter } from 'next/navigation';
+import api from '@/lib/axios';
+import Sidebar from '@/app/components/Sidebar';
+import Header from '@/app/components/Header';
 import {
-  Home,
-  ClipboardList,
-  BarChart2,
-  FileText,
-  Clock,
-  TrendingUp,
-  User,
-  LogOut,
-  ImagePlus,
-  PlusCircle,
-  ChevronDown,
-  CheckCircle,
-  XCircle,
+    ClipboardList,
+    BarChart2,
+    Clock,
+    TrendingUp,
+    Image as ImageIcon,
+    ChevronRight,
+    AlertCircle,
+    CheckCircle,
+    XCircle
 } from 'lucide-react';
 
-/* ================= TOP NAVBAR ================= */
-function TopNavbar({ user }: any) {
-  const avatarLetter =
-    typeof user?.schoolName === 'string'
-      ? user.schoolName.charAt(0).toUpperCase()
-      : 'S';
-
-  return (
-    <div className="h-16 bg-white px-8 flex items-center justify-between">
-      
-      {/* SEARCH */}
-      <div className="flex-1 flex justify-start">
-        <div className="relative w-full max-w-md">
-          <input
-            type="text"
-            placeholder="Search for something"
-            className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm outline-none focus:ring-2 focus:ring-indigo-300"
-          />
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            🔍
-          </span>
-        </div>
-      </div>
-
-      {/* PROFILE */}
-      <div
-        className="flex items-center gap-3 cursor-pointer"
-        onClick={() => (window.location.href = '/profil')}
-      >
-        <div className="w-9 h-9 bg-indigo-600 text-white rounded-full flex items-center justify-center font-semibold">
-          {avatarLetter}
-        </div>
-
-        <div className="text-right leading-tight">
-          <p className="text-sm font-medium text-gray-800 truncate max-w-[140px]">
-            {user?.schoolName}
-          </p>
-          <p className="text-xs text-gray-500 truncate max-w-[140px]">
-            {user?.email}
-          </p>
-        </div>
-      </div>
-
-    </div>
-  );
+/* ================= TYPES ================= */
+interface UserData {
+    schoolName: string;
+    email: string;
+    npsn?: string;
 }
+
+/* ================= COMPONENTS (LOCAL) ================= */
+
+function StatCard({ title, value, icon, type = 'info' }: any) {
+    return (
+        <div className="bg-white p-6 rounded-2xl border border-[#B2F5EA] hover:shadow-sm transition-shadow">
+            <div className="flex justify-between items-start mb-4">
+                <div className={`p-3 rounded-xl ${type === 'primary' ? 'bg-[#E6FFFA] text-[#1E8F86]' :
+                    type === 'warning' ? 'bg-orange-50 text-orange-500' :
+                        'bg-gray-50 text-[#6B8E8B]'
+                    }`}>
+                    {icon}
+                </div>
+            </div>
+            <p className="text-sm text-[#6B8E8B] font-medium mb-1">{title}</p>
+            <h3 className="text-2xl font-bold text-[#0F2F2E]">{value}</h3>
+        </div>
+    );
+}
+
+function SectionCard({ title, children, actionLabel, onAction }: any) {
+    return (
+        <div className="bg-white rounded-2xl border border-[#B2F5EA] overflow-hidden flex flex-col h-full">
+            <div className="p-5 border-b border-[#F1F5F9] flex justify-between items-center">
+                <h3 className="font-bold text-[#0F2F2E]">{title}</h3>
+                {actionLabel && (
+                    <button
+                        onClick={onAction}
+                        className="text-xs font-semibold text-[#40E0D0] hover:text-[#1E8F86] transition flex items-center gap-1"
+                    >
+                        {actionLabel} <ChevronRight size={14} />
+                    </button>
+                )}
+            </div>
+            <div className="p-5 flex-1">
+                {children}
+            </div>
+        </div>
+    );
+}
+
+function EmptyState({ icon, title, description, action, onAction }: any) {
+    return (
+        <div className="flex flex-col items-center justify-center text-center py-8 h-full min-h-[200px]">
+            <div className="p-4 bg-[#F8FAFC] rounded-full mb-4 text-[#6B8E8B] border border-dashed border-[#B2F5EA]">
+                {icon}
+            </div>
+            <h4 className="text-sm font-bold text-[#0F2F2E] mb-1">{title}</h4>
+            <p className="text-xs text-[#6B8E8B] max-w-[200px] mb-4 leading-relaxed">{description}</p>
+            {action && (
+                <button
+                    onClick={onAction}
+                    className="px-4 py-2 bg-[#E6FFFA] text-[#1E8F86] text-xs font-bold rounded-lg hover:bg-[#CCFBF1] transition"
+                >
+                    {action}
+                </button>
+            )}
+        </div>
+    );
+}
+
+/* ================= MAIN DASHBOARD PAGE ================= */
 
 export default function DashboardPage() {
+    const pathname = usePathname();
+    const router = useRouter();
+    const [openSidebar, setOpenSidebar] = useState(false);
 
-  const pathname = usePathname();
+    // State
+    const [user, setUser] = useState<UserData | null>(null);
+    const [officialSchool, setOfficialSchool] = useState<any>(null);
+    const [verified, setVerified] = useState<boolean | null>(null);
 
-  const [user, setUser] = useState<any>(null);
-  const [verified, setVerified] = useState<boolean | null>(null);
-  const [officialSchool, setOfficialSchool] = useState<any>(null);
+    // Financial Stats
+    const [stats, setStats] = useState({
+        totalBudget: 0,
+        usedBudget: 0,
+        remainingBudget: 0
+    });
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (!storedUser) {
-      window.location.href = '/login';
-      return;
-    }
+    // Initial Load & Verification
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (!storedUser) {
+            window.location.href = '/login';
+            return;
+        }
 
-    const parsedUser = JSON.parse(storedUser);
-    setUser(parsedUser);
+        const parsed = JSON.parse(storedUser);
+        setUser(parsed);
 
-    if (parsedUser.npsn) {
-      verifySchool(parsedUser.npsn);
-    }
-  }, []);
+        // Fetch Kemendikbud Data via Next.js API Route (Same Origin - No CORS)
+        if (parsed.npsn) {
+            fetch(`/api/verifikasi-sekolah?npsn=${parsed.npsn}`)
+                .then(res => res.json())
+                .then(json => {
+                    if (json?.data?.satuanPendidikan) {
+                        setVerified(true);
+                        setOfficialSchool(json.data.satuanPendidikan);
+                    } else {
+                        setVerified(false);
+                    }
+                })
+                .catch((err) => {
+                    console.error("Verification Error:", err);
+                    setVerified(false);
+                });
+        }
 
-  /* ================= VERIFY SCHOOL ================= */
-  const verifySchool = async (npsn: string) => {
-    try {
-      const res = await fetch(
-        `https://api.fazriansyah.eu.org/v1/sekolah?npsn=${npsn}`
-      );
-      const json = await res.json();
+        // Fetch Financial Data
+        fetchFinancialData();
 
-      if (json?.data?.satuanPendidikan) {
-        setVerified(true);
-        setOfficialSchool(json.data.satuanPendidikan);
-      } else {
-        setVerified(false);
-      }
-    } catch {
-      setVerified(false);
-    }
-  };
+    }, []);
 
-  if (!user) {
+    const fetchFinancialData = async () => {
+        try {
+            const [proposalsRes, reportsRes] = await Promise.all([
+                api.get('/proposals'),
+                api.get('/reports')
+            ]);
+
+            // Calculate Total Budget (Target Amount of Approved Proposals)
+            const approvedProposals = proposalsRes.data.filter((p: any) => p.status === 'approved');
+            const totalBudget = approvedProposals.reduce((sum: number, p: any) => sum + (Number(p.targetAmount) || 0), 0);
+
+            // Calculate Used Budget (Sum of Report Amounts - Submitted)
+            const submittedReports = reportsRes.data.filter((r: any) => r.status === 'submitted');
+            const usedBudget = submittedReports.reduce((sum: number, r: any) => sum + (Number(r.amount) || 0), 0);
+
+            setStats({
+                totalBudget,
+                usedBudget,
+                remainingBudget: totalBudget - usedBudget
+            });
+
+        } catch (error) {
+            console.error("Failed to fetch financial stats", error);
+        }
+    };
+
+    const formatCurrency = (val: number) => {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
+    };
+
+    if (!user) return null;
+
     return (
-      <div className="p-10 text-sm text-gray-400">
-        Memuat data akun...
-      </div>
+        <div className="min-h-screen flex bg-[#E6FFFA]">
+            {/* 1. SIDEBAR */}
+            <Sidebar
+                user={user}
+                open={openSidebar}
+                setOpen={setOpenSidebar}
+                pathname={pathname}
+                verified={verified}
+                officialName={officialSchool?.nama}
+            />
+
+            <div className="flex-1 flex flex-col min-w-0">
+                {/* 2. HEADER */}
+                <Header
+                    user={user}
+                    setOpen={setOpenSidebar}
+                    officialName={officialSchool?.nama}
+                    title="Dashboard Sekolah"
+                />
+
+                <main className="flex-1 p-4 md:p-8 max-w-[1600px] mx-auto w-full space-y-8">
+
+                    {/* 3. SUMMARY CARDS */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <StatCard
+                            title="Total Anggaran Disetujui"
+                            value={formatCurrency(stats.totalBudget)}
+                            icon={<ClipboardList size={24} />}
+                            type="primary"
+                        />
+                        <StatCard
+                            title="Dana Digunakan (Laporan)"
+                            value={formatCurrency(stats.usedBudget)}
+                            icon={<TrendingUp size={24} />}
+                            type="warning"
+                        />
+                        <StatCard
+                            title="Sisa Anggaran"
+                            value={formatCurrency(stats.remainingBudget)}
+                            icon={<BarChart2 size={24} />}
+                            type="primary"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 items-start">
+
+                        {/* 4. MAIN CONTENT (LEFT COL) */}
+                        <div className="space-y-8">
+                            {/* A. GALERI */}
+                            <div className="h-[320px]">
+                                <SectionCard
+                                    title="Galeri Dokumentasi"
+                                    actionLabel="Lihat Semua"
+                                    onAction={() => router.push('/progress')}
+                                >
+                                    <EmptyState
+                                        icon={<ImageIcon size={32} />}
+                                        title="Belum ada dokumentasi"
+                                        description="Upload foto perkembangan sekolah untuk transparansi."
+                                        action="Upload Foto"
+                                        onAction={() => router.push('/progress')}
+                                    />
+                                </SectionCard>
+                            </div>
+
+                            {/* B. TIMELINE KEGIATAN */}
+                            <div className="h-[320px]">
+                                <SectionCard
+                                    title="Timeline Kegiatan"
+                                    actionLabel="Lihat Timeline"
+                                    onAction={() => router.push('/timeline')}
+                                >
+                                    <EmptyState
+                                        icon={<Clock size={32} />}
+                                        title="Belum ada kegiatan"
+                                        description="Jadwal kegiatan yang akan datang akan muncul di sini."
+                                        action="Buat Kegiatan"
+                                        onAction={() => router.push('/timeline')}
+                                    />
+                                </SectionCard>
+                            </div>
+                        </div>
+
+                        {/* 5. RIGHT PANEL */}
+                        <div className="space-y-8">
+                            {/* INFO SEKOLAH */}
+                            <SectionCard
+                                title="Informasi Sekolah"
+                                actionLabel="Edit"
+                                onAction={() => router.push('/profil')}
+                            >
+                                <div className="space-y-4">
+                                    <div>
+                                        <p className="text-xs text-[#6B8E8B] mb-1">Nama Sekolah</p>
+                                        <p className="font-semibold text-[#0F2F2E]">
+                                            {officialSchool?.nama || user.schoolName || '-'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-[#6B8E8B] mb-1">NPSN</p>
+                                        <p className="font-semibold text-[#0F2F2E]">{user.npsn || '-'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-[#6B8E8B] mb-1">Lokasi</p>
+                                        <p className="text-sm font-medium text-[#4A6F6C] italic">{officialSchool?.alamat_jalan || 'Belum diisi'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-[#6B8E8B] mb-1">Penanggung Jawab</p>
+                                        <p className="text-sm font-medium text-[#4A6F6C] italic">Belum diisi</p>
+                                    </div>
+                                </div>
+                            </SectionCard>
+
+                            {/* TRANSPARANSI DANA & NOTIF */}
+                            <SectionCard title="Notifikasi Baru">
+                                <EmptyState
+                                    icon={<AlertCircle size={28} />}
+                                    title="Tidak ada notifikasi"
+                                    description="Anda akan mendapat pemberitahuan penting di sini."
+                                />
+                            </SectionCard>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
     );
-  }
-
-  /* ================= SAFE DATA ================= */
-  const schoolName =
-    officialSchool?.nama || user.schoolName || 'Sekolah';
-
-  const avatarLetter =
-    typeof schoolName === 'string'
-      ? schoolName.charAt(0).toUpperCase()
-      : 'S';
-
-  return (
-    <div className="min-h-screen flex bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-
-      {/* ================= SIDEBAR ================= */}
-<aside className="w-64 bg-white px-6 py-6 flex flex-col justify-between">
-
-  <div>
-    {/* SCHOOL INFO */}
-    <div className="mb-10">
-      <h1 className="text-lg font-bold text-indigo-600 truncate">
-        {schoolName}
-      </h1>
-
-      {verified === null && (
-        <p className="text-xs text-gray-400">
-          memeriksa verifikasi...
-        </p>
-      )}
-
-      {verified === true && (
-        <p className="text-xs text-green-600 flex items-center gap-1">
-          <CheckCircle size={14} />
-          Terverifikasi Kemendikbud
-        </p>
-      )}
-
-      {verified === false && (
-        <p className="text-xs text-red-500 flex items-center gap-1">
-          <XCircle size={14} />
-          Belum Terverifikasi
-        </p>
-      )}
-    </div>
-
-    {/* MENU */}
-    <nav className="space-y-2 text-sm">
-      <MenuLink href="/dashboard" icon={<Home size={18} />} label="Dashboard" active={pathname === '/dashboard'} />
-      <MenuLink href="/pengajuan" icon={<ClipboardList size={18} />} label="Pengajuan" active={pathname === '/pengajuan'} />
-      <MenuLink href="/ringkasan" icon={<BarChart2 size={18} />} label="Ringkasan" active={pathname === '/ringkasan'} />
-      <MenuLink href="/laporan" icon={<FileText size={18} />} label="Laporan" active={pathname === '/laporan'} />
-      <MenuLink href="/timeline" icon={<Clock size={18} />} label="Timeline" active={pathname === '/timeline'} />
-      <MenuLink href="/progress" icon={<TrendingUp size={18} />} label="Progress" active={pathname === '/progres'} />
-      <MenuLink href="/profil" icon={<User size={18} />} label="Profil" active={pathname === '/profil'} />
-    </nav>
-  </div>
-
-  {/* LOGOUT */}
-  <button
-    onClick={() => {
-      localStorage.clear();
-      window.location.href = '/login';
-    }}
-    className="flex items-center gap-2 text-sm text-gray-500 hover:text-red-500"
-  >
-    <LogOut size={18} />
-    Logout
-  </button>
-</aside>
-
-
-{/* ================= MAIN ================= */}
-<div className="flex-1 flex flex-col">
-  <TopNavbar user={user} />
-
-  <main className="flex-1 p-10">
-    <div className="max-w-5xl mx-auto space-y-8">
-
-      {/* STAT */}
-      <div className="grid grid-cols-4 gap-5">
-        <StatCard title="Target Dana" value="Rp 0" color="indigo" />
-        <StatCard title="Dana Terkumpul" value="Rp 0" color="blue" />
-        <StatCard title="Dana Digunakan" value="Rp 0" color="emerald" />
-        <StatCard
-          title="Status"
-          value="Belum Mengajukan"
-          color="gray"
-          badge="Nonaktif"
-        />
-      </div>
-
-      {/* CONTENT */}
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2 space-y-6">
-          <Card title="Galeri Kondisi & Progress">
-            <EmptyState
-              icon={<ImagePlus size={36} />}
-              text="Belum ada foto kondisi sekolah"
-              action="Upload Foto"
-            />
-          </Card>
-
-          <Card title="Timeline Kegiatan">
-            <EmptyState
-              icon={<PlusCircle size={36} />}
-              text="Belum ada kegiatan yang diajukan"
-              action="Ajukan Kegiatan"
-            />
-          </Card>
-        </div>
-
-        <div className="space-y-6">
-          <Card title="Ringkasan Transparansi Dana">
-            <p className="text-sm text-gray-400 text-center py-8">
-              Data akan muncul setelah pengajuan disetujui
-            </p>
-          </Card>
-
-          <Card title="Notifikasi">
-            <p className="text-sm text-gray-400 text-center py-8">
-              Belum ada notifikasi
-            </p>
-          </Card>
-        </div>
-      </div>
-
-    </div>
-  </main>
-</div>
-    </div>
-  );
-}
-
-/* ================= SIDEBAR LINK ================= */
-function MenuLink({ href, icon, label, active }: any) {
-  return (
-    <Link
-      href={href}
-      className={`flex items-center gap-3 px-4 py-2 rounded-lg transition
-        ${
-          active
-            ? 'bg-indigo-100 text-indigo-600 font-medium'
-            : 'text-gray-600 hover:bg-indigo-50 hover:text-indigo-600'
-        }`}
-    >
-      {icon}
-      {label}
-    </Link>
-  );
-}
-
-/* ================= UI COMPONENTS ================= */
-
-function StatCard({ title, value, badge, color }: any) {
-  const colors: any = {
-    indigo: 'text-indigo-600',
-    blue: 'text-blue-600',
-    emerald: 'text-emerald-600',
-    gray: 'text-gray-600',
-  };
-
-  return (
-    <div className="bg-white p-5 rounded-xl shadow-sm">
-      <p className="text-sm text-gray-500">{title}</p>
-      <div className="flex items-center justify-between mt-2">
-        <p className={`text-lg font-semibold ${colors[color]}`}>
-          {value}
-        </p>
-        {badge && (
-          <span className="text-xs px-3 py-1 rounded-full bg-gray-200 text-gray-600">
-            {badge}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Card({ title, children }: any) {
-  return (
-    <div className="bg-white p-6 rounded-xl shadow-sm">
-      <h2 className="font-semibold text-gray-700 mb-4">{title}</h2>
-      {children}
-    </div>
-  );
-}
-
-function EmptyState({ icon, text, action }: any) {
-  return (
-    <div className="flex flex-col items-center justify-center text-center py-12 text-gray-400 border-2 border-dashed rounded-xl">
-      <div className="mb-3">{icon}</div>
-      <p className="text-sm">{text}</p>
-      <button className="mt-3 text-sm text-indigo-600 hover:underline">
-        {action}
-      </button>
-    </div>
-  );
 }
